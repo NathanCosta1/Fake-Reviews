@@ -24,12 +24,16 @@ def process_reviews(reviews):
             cleaned_reviews.append("")
     return cleaned_reviews
 
+def count_capital_letters(text):
+    return sum(1 for char in text if char.isupper())
+
 try:
     # Read data from CSV
-    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/APEX/reviews_data.csv")
+    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv")
 
     # Process reviews
     cleaned_reviews = process_reviews(df['Review Text'])
+    df.drop(columns=['Review Text'], inplace=True)
 
     # Create dataframe with relevant features
     df['Cleaned Review'] = cleaned_reviews
@@ -37,18 +41,18 @@ try:
     df['Contains Profanity'] = df['Cleaned Review'].apply(lambda x: profanity.contains_profanity(x)).astype(int)
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 
+    # Calculate number of capital letters in review text
+    df['Capital Letters'] = df['Cleaned Review'].apply(count_capital_letters)
+
     # Standardize certain features using StandardScaler
     scaler = StandardScaler()
-    df['Capital Letters Standardized'] = scaler.fit_transform(df[['Capital Letters']])
-    df['Star Rating Standardized'] = scaler.fit_transform(df[['Star Rating']])
-    df['Total Films Reviewed Standardized'] = scaler.fit_transform(df[['Total Films Reviewed']])
-    df['Reviews This Year Standardized'] = scaler.fit_transform(df[['Reviews This Year']])
-    df['Followers Standardized'] = scaler.fit_transform(df[['Followers']])
-    df['Following Standardized'] = scaler.fit_transform(df[['Following']])
+    df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']] = \
+        scaler.fit_transform(df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']])
 
     # Calculate and standardize review length
     df['Review Length'] = df['Cleaned Review'].apply(len)
     df['Review Length Standardized'] = scaler.fit_transform(df[['Review Length']])
+    # Drop the original 'Review Length' column
     df.drop(columns=['Review Length'], inplace=True)
 
     # TF-IDF Vectorization
@@ -63,12 +67,8 @@ try:
     # Add cluster labels to the DataFrame
     df['Cluster'] = kmeans.labels_
 
-    # Drop unnecessary columns
-    columns_to_drop = ['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Following', 'Followers', 'Review Text']
-    df.drop(columns=columns_to_drop, inplace=True)
-
     # Save results to CSV
-    df.to_csv("C:/Users/82nat/OneDrive/Desktop/APEX/clustered_reviews.csv", index=False)
+    df.to_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv", index=False)
     print("Results saved")
 except Exception as e:
     print(f"Error: {e}")

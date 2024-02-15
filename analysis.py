@@ -19,13 +19,13 @@ def compute_cluster_stats(clustered_df):
     for label, data in groups:
         avg_sentiment = data['Sentiment'].mean()
         avg_review_length = data['Review Length Standardized'].mean()
-        avg_capital_letters = data['Capital Letters Standardized'].mean()
-        contains_profanity_rate = data['Contains Profanity Standardized'].mean()
-        avg_star_rating = data['Star Rating Normalized Standardized'].mean()
-        avg_total_films_reviewed = data['Total Films Reviewed Standardized'].mean()
-        avg_reviews_this_year = data['Reviews This Year Standardized'].mean()
-        avg_followers = data['Followers Standardized'].mean()
-        avg_following = data['Following Standardized'].mean()
+        avg_capital_letters = data['Capital Letters'].mean()
+        contains_profanity_rate = data['Contains Profanity'].mean()
+        avg_star_rating = data['Star Rating'].mean()
+        avg_total_films_reviewed = data['Total Films Reviewed'].mean()
+        avg_reviews_this_year = data['Reviews This Year'].mean()
+        avg_followers = data['Followers'].mean()
+        avg_following = data['Following'].mean()
 
         stats[label] = {
             'Average Sentiment': avg_sentiment,
@@ -68,31 +68,35 @@ def visualize_clusters(data_matrix, cluster_labels):
     plt.legend(title='Cluster')
     plt.show()
 
-clustered_df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/APEX/clustered_reviews.csv")
+def main():
+    clustered_df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv")
 
-# Remove rows with empty reviews
-clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
+    # Remove rows with empty reviews
+    clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
 
-# Redo TF-IDF Vectorization
-vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
-data_matrix = vectorizer.fit_transform(clustered_df['Cleaned Review'])
+    # Redo TF-IDF Vectorization 
+    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
+    data_matrix = vectorizer.fit_transform(clustered_df['Cleaned Review'])
 
-# Elbow Method (for determining how many clusters)
-sosd = [] # Sum of Squared Distances
-for i in range(1, 15):
-    kmeans = KMeans(n_clusters=i)
-    kmeans.fit(data_matrix)
-    sosd.append(kmeans.inertia_)
+    # Elbow Method (for determining how many clusters)
+    sosd = [] # Sum of Squared Distances
+    for i in range(1, 15):
+        kmeans = KMeans(n_clusters=i)
+        kmeans.fit(data_matrix)
+        sosd.append(kmeans.inertia_)
 
-# Plot Elbow Method
-visualize_elbow_method(sosd)
+    # Plot Elbow Method
+    visualize_elbow_method(sosd)
 
-# Cluster Stats
-if clustered_df['Cluster'].nunique() > 1:
-    compute_cluster_stats(clustered_df)
+    # Cluster Stats
+    if clustered_df['Cluster'].nunique() > 1:
+        compute_cluster_stats(clustered_df)
 
-# Silhouette Score
-compute_silhouette_score(data_matrix, clustered_df['Cluster'])
+    # Silhouette Score
+    compute_silhouette_score(data_matrix, clustered_df['Cluster'])
 
-# Graph results using PCA
-visualize_clusters(data_matrix, clustered_df['Cluster'])
+    # Graph results using PCA
+    visualize_clusters(data_matrix, clustered_df['Cluster'])
+
+if __name__ == "__main__":
+    main()
