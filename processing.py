@@ -5,7 +5,6 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from textblob import TextBlob
-import unicodedata
 from better_profanity import profanity
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
@@ -14,7 +13,6 @@ def process_reviews(reviews):
     cleaned_reviews = []
     for review in reviews:
         if isinstance(review, str) and review.strip():
-            review = unicodedata.normalize('NFC', review)
             review_nopunct = "".join([char for char in review if char not in string.punctuation])
             tokens = re.split(r'\W+', review_nopunct)
             tokens = [word for word in tokens]
@@ -44,7 +42,7 @@ try:
     # Calculate number of capital letters in review text
     df['Capital Letters'] = df['Cleaned Review'].apply(count_capital_letters)
 
-    # Standardize certain features using StandardScaler
+    # Standardize features 
     scaler = StandardScaler()
     df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']] = \
         scaler.fit_transform(df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']])
@@ -70,5 +68,6 @@ try:
     # Save results to CSV
     df.to_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv", index=False)
     print("Results saved")
+    
 except Exception as e:
     print(f"Error: {e}")

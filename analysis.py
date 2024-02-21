@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 
-def visualize_elbow_method(sosd):
+def elbow_method_graph(sosd):
     plt.plot(range(1, 15), sosd)
     plt.title('Elbow Method')
     plt.xlabel('Number of Clusters')
@@ -86,7 +86,7 @@ def main():
         sosd.append(kmeans.inertia_)
 
     # Plot Elbow Method
-    visualize_elbow_method(sosd)
+    elbow_method_graph(sosd)
 
     # Cluster Stats
     if clustered_df['Cluster'].nunique() > 1:

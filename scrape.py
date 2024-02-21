@@ -15,13 +15,12 @@ movie_urls = [
     "https://letterboxd.com/film/the-iron-claw-2023/reviews/by/activity/page/{}/"
 ]
 
-# Open the CSV file in write mode
+# Create CSV to store review data
 with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile)
     # Create header 
     writer.writerow(["Review Text", "Date", "Star Rating", "Total Films Reviewed", "Reviews This Year", "Following", "Followers"])
     
-    # Iterate over each movie URL
     for url in movie_urls:
         page_number = 1
         while True:
@@ -42,11 +41,11 @@ with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', e
                 
                 for review, date, star, avatar in zip(reviews, dates, stars, avatars):
                     review_text = review.get_text(strip=True)
-                    review_date = date.get_text(strip=True)[-11:]  # Extract the last 11 characters
-                    star_rating = star.get("class")[-1][-1]  # Extract the last character of the class
-                    user_profile_link = "https://letterboxd.com" + avatar["href"]
+                    review_date = date.get_text(strip=True)[-11:]  # Extract the last 11 characters (the date includes other non - important info)
+                    star_rating = star.get("class")[-1][-1]  # Extract the last character of the class (same reasoning as date)
+                    user_profile_link = "https://letterboxd.com" + avatar["href"] 
                     
-                    # Make a new request to the user's profile page
+                    # Go to User's profile through the link in their avatar - this will give us access to relevant user data like # of reviews made
                     profile_response = requests.get(user_profile_link)
                     profile_response.raise_for_status()  # Raise an exception for HTTP errors
                     
@@ -66,11 +65,13 @@ with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', e
                     else:
                         followers = "0"
                   
-                    if "this review may contain spoilers" not in review_text.lower():
+                    if "this review may contain spoilers" not in review_text.lower(): 
                         # Write current review and all data to a row in CSV file
                         writer.writerow([review_text, review_date, star_rating, total_films_reviewed, reviews_this_year, following, followers])
+
             except Exception as e:
                 print(f"An error occurred: {e}")
                 # Continue to the next page even if there's an error
+            
             finally:
                 page_number += 1
