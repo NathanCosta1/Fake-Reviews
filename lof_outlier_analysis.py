@@ -8,7 +8,7 @@ def visualize_lof_outliers(data_matrix, lof_outliers):
     pca = PCA(n_components=2)
     data_pca = pca.fit_transform(data_matrix.toarray())
 
-    colors = plt.cm.tab10(range(2))  # Assuming outliers and inliers are two colors
+    colors = plt.cm.tab10(range(2))  # Outliers and inliers are 2 colors
 
     plt.figure(figsize=(8, 6))
     plt.scatter(data_pca[:, 0], data_pca[:, 1], c='red', alpha=0.5, label='Outliers')
@@ -42,22 +42,19 @@ def main():
     vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
     data_matrix = vectorizer.fit_transform(clustered_df['Cleaned Review'])
 
-    # Plot and save LOF outliers
+    # Plot
     lof_outliers = lof_outlier_detection(data_matrix)
-    # visualize_lof_outliers(data_matrix, lof_outliers)
-        
-    # Reset index of lof_outliers to ensure alignment with clustered_df
-    lof_outliers.reset_index(drop=True, inplace=True)
+    visualize_lof_outliers(data_matrix, lof_outliers)
 
-    # Add column indicating inliers (1) and outliers (0)
-    lof_outliers['Is Outlier'] = 1  # Default to outliers
-    # Update the 'Is Outlier' column for rows identified as inliers
-    clustered_df.loc[lof_outliers.index, 'Is Outlier'] = 0
+    # Merge LOF outliers with the main DataFrame based on index
+    clustered_df = pd.merge(clustered_df, lof_outliers, left_index=True, right_index=True, how='left', suffixes=('', '_LOF'))
 
-    # # Add Review text for manual review
-    lof_outliers = pd.merge(lof_outliers, clustered_df[['Cleaned Review']], left_index=True, right_index=True)
+    # Default all values to inlier
+    clustered_df['Is Outlier'] = clustered_df['LOF Score'].apply(lambda x: 0 if pd.notnull(x) else 1)
 
-    lof_outliers.to_csv('C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/lof_outliers.csv', index=False)
+    # Save DataFrame with ONLY LOF score and Is outlier columns
+    clustered_df.drop(columns = ['Date', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Following', 'Followers', 'Sentiment', 'Contains Profanity', 'Capital Letters', 'Review Length Standardized', 'Cluster'], inplace=True )
+    clustered_df.to_csv('C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/lof_outliers.csv', index=False)
 
 if __name__ == "__main__":
     main()
