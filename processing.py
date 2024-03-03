@@ -56,9 +56,16 @@ try:
     # TF-IDF Vectorization
     vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
     data_matrix = vectorizer.fit_transform(df['Cleaned Review'])
+    column_names = vectorizer.get_feature_names_out()
+
+    data_matrix = pd.concat([df[['Sentiment', 'Contains Profanity', 'Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']], pd.DataFrame(data_matrix.toarray(), columns=column_names)], axis=1)
+
+    # Standardize all features
+    scaler_combined = StandardScaler()
+    data_matrix = scaler_combined.fit_transform(data_matrix)
 
     # Perform k-means clustering
-    k = 2
+    k = 7
     kmeans = KMeans(n_clusters=k, random_state=5)
     kmeans.fit(data_matrix)
 

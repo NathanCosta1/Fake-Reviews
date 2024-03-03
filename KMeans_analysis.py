@@ -6,7 +6,7 @@ from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 
 def elbow_method_graph(sosd):
-    plt.plot(range(1, 15), sosd)
+    plt.plot(range(1, 20), sosd)
     plt.title('Elbow Method')
     plt.xlabel('Number of Clusters')
     plt.ylabel('Sum of Squared Distances') 
@@ -51,7 +51,7 @@ def compute_silhouette_score(data_matrix, cluster_labels):
 
 def visualize_clusters(data_matrix, cluster_labels):
     pca = PCA(n_components=2) # Reducing the dimensions to 2 so we can visualize it in a graph
-    data_pca = pca.fit_transform(data_matrix.toarray())
+    data_pca = pca.fit_transform(data_matrix)
 
     colors = plt.cm.tab10(range(cluster_labels.nunique()))
 
@@ -73,16 +73,13 @@ def main():
 
     # Remove rows with empty reviews
     clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
-
-    # Redo TF-IDF Vectorization 
-    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
-    data_matrix = vectorizer.fit_transform(clustered_df['Cleaned Review'])
+    clustered_df = clustered_df.drop(columns=['Cleaned Review', 'Date']) # Get rid of date for now until we want to add it to anaylsis 
 
     # Elbow Method (for determining how many clusters)
     sosd = [] # Sum of Squared Distances
-    for i in range(1, 15):
+    for i in range(1, 20):
         kmeans = KMeans(n_clusters=i)
-        kmeans.fit(data_matrix)
+        kmeans.fit(clustered_df)  
         sosd.append(kmeans.inertia_)
 
     # Plot Elbow Method
@@ -92,10 +89,10 @@ def main():
     compute_cluster_stats(clustered_df)
 
     # Silhouette Score
-    compute_silhouette_score(data_matrix, clustered_df['Cluster'])
+    compute_silhouette_score(clustered_df, clustered_df['Cluster'])
 
     # Graph results using PCA
-    visualize_clusters(data_matrix, clustered_df['Cluster'])
+    visualize_clusters(clustered_df, clustered_df['Cluster'])
 
 if __name__ == "__main__":
     main()

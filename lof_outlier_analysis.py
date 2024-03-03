@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
 import matplotlib.pyplot as plt
@@ -6,13 +7,16 @@ from sklearn.neighbors import LocalOutlierFactor
 
 def visualize_lof_outliers(data_matrix, lof_outliers):
     pca = PCA(n_components=2)
-    data_pca = pca.fit_transform(data_matrix.toarray())
+    numeric_data = data_matrix.select_dtypes(include=[np.number])  # Select only numeric columns
+    data_pca = pca.fit_transform(numeric_data)
 
+    lof_outliers_reset = lof_outliers.reset_index(drop=True)  # Reset the index of lof_outliers
+    
     colors = plt.cm.tab10(range(2))  # Outliers and inliers are 2 colors
 
     plt.figure(figsize=(8, 6))
     plt.scatter(data_pca[:, 0], data_pca[:, 1], c='red', alpha=0.5, label='Outliers')
-    plt.scatter(data_pca[lof_outliers.index, 0], data_pca[lof_outliers.index, 1], 
+    plt.scatter(data_pca[lof_outliers_reset.index, 0], data_pca[lof_outliers_reset.index, 1], 
                 c='gray', label='Inliers')
     
     plt.title('Outlier Detection using Local Outlier Factor (LOF)')
@@ -22,11 +26,14 @@ def visualize_lof_outliers(data_matrix, lof_outliers):
     plt.show()
 
 def lof_outlier_detection(data_matrix):
-    lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)  # Can change to make outliers more or less sensitive
-    lof.fit_predict(data_matrix)
+    numeric_columns = data_matrix.select_dtypes(include=[np.number]).columns
+    data_matrix_numeric = data_matrix[numeric_columns]
+
+    lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+    lof.fit_predict(data_matrix_numeric)
     lof_scores = -lof.negative_outlier_factor_  
-    
-    threshold = sorted(lof_scores)[int(0.1 * len(lof_scores))]  # Can change to make outliers more or less sensitive
+
+    threshold = sorted(lof_scores)[int(0.1 * len(lof_scores))]
     lof_outliers = pd.DataFrame({'LOF Score': lof_scores})
     lof_outliers = lof_outliers[lof_outliers['LOF Score'] > threshold]
     
@@ -38,13 +45,9 @@ def main():
     # Remove rows with empty reviews
     clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
 
-    # Redo TF-IDF Vectorization 
-    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
-    data_matrix = vectorizer.fit_transform(clustered_df['Cleaned Review'])
-
     # Plot
-    lof_outliers = lof_outlier_detection(data_matrix)
-    visualize_lof_outliers(data_matrix, lof_outliers)
+    lof_outliers = lof_outlier_detection(clustered_df)
+    visualize_lof_outliers(clustered_df, lof_outliers)
 
     # Merge LOF outliers with the main DataFrame based on index
     clustered_df = pd.merge(clustered_df, lof_outliers, left_index=True, right_index=True, how='left', suffixes=('', '_LOF'))
