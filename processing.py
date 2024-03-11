@@ -8,6 +8,7 @@ from textblob import TextBlob
 from better_profanity import profanity
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import TruncatedSVD
 
 def process_reviews(reviews):
     cleaned_reviews = []
@@ -48,15 +49,19 @@ try:
 
     # Peform TF-IDF Vectorization with L1 Normalization
     vectorizer = TfidfVectorizer(stop_words='english', analyzer='word', norm='l1')
-    data_matrix_tfidf = vectorizer.fit_transform(df['Cleaned Review'])
-    column_names_tfidf = vectorizer.get_feature_names_out()
+    data_matrix = vectorizer.fit_transform(df['Cleaned Review'])
+    column_names = vectorizer.get_feature_names_out()
 
-    # num_documents, num_dimensions = data_matrix_tfidf.shape
+    # num_documents, num_dimensions = data_matrix.shape
     # print("Number of documents:", num_documents)
     # print("Number of dimensions aka unique terms:", num_dimensions)
 
-    # Concatenate TF-IDF vectors with standardized other features
-    data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix_tfidf.toarray(), columns=column_names_tfidf)], axis=1)
+    # Perform PCA for dimensionality reduction
+    svd = TruncatedSVD(n_components=50)  
+    data_matrix = svd.fit_transform(data_matrix)
+
+    # Concatenate reduced and normalized TF-IDF vectors with the other (standarized) features
+    data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix, columns=[f"SVD_{i}" for i in range(svd.n_components)])], axis=1) 
 
     # Perform k-means clustering
     k = 7
