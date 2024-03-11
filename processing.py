@@ -37,32 +37,26 @@ try:
     df['Cleaned Review'] = cleaned_reviews
     df['Sentiment'] = df['Cleaned Review'].apply(lambda x: TextBlob(x).sentiment.polarity)
     df['Contains Profanity'] = df['Cleaned Review'].apply(lambda x: profanity.contains_profanity(x)).astype(int)
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-
-    # Calculate number of capital letters in review text
     df['Capital Letters'] = df['Cleaned Review'].apply(count_capital_letters)
-
-    # Standardize features 
-    scaler = StandardScaler()
-    df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']] = \
-        scaler.fit_transform(df[['Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']])
-
-    # Calculate and standardize review length
     df['Review Length'] = df['Cleaned Review'].apply(len)
-    df['Review Length Standardized'] = scaler.fit_transform(df[['Review Length']])
-    # Drop the original 'Review Length' column
-    df.drop(columns=['Review Length'], inplace=True)
-
-    # TF-IDF Vectorization
-    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word')
-    data_matrix = vectorizer.fit_transform(df['Cleaned Review'])
-    column_names = vectorizer.get_feature_names_out()
-
-    data_matrix = pd.concat([df[['Sentiment', 'Contains Profanity', 'Capital Letters', 'Star Rating', 'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']], pd.DataFrame(data_matrix.toarray(), columns=column_names)], axis=1)
 
     # Standardize all features
-    scaler_combined = StandardScaler()
-    data_matrix = scaler_combined.fit_transform(data_matrix)
+    features = ['Sentiment', 'Contains Profanity', 'Capital Letters', 'Star Rating', \
+                    'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']
+    scaler = StandardScaler()
+    df[features] = scaler.fit_transform(df[features])
+
+    # Peform TF-IDF Vectorization with L1 Normalization
+    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word', norm='l1')
+    data_matrix_tfidf = vectorizer.fit_transform(df['Cleaned Review'])
+    column_names_tfidf = vectorizer.get_feature_names_out()
+
+    # num_documents, num_dimensions = data_matrix_tfidf.shape
+    # print("Number of documents:", num_documents)
+    # print("Number of dimensions aka unique terms:", num_dimensions)
+
+    # Concatenate TF-IDF vectors with standardized other features
+    data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix_tfidf.toarray(), columns=column_names_tfidf)], axis=1)
 
     # Perform k-means clustering
     k = 7
