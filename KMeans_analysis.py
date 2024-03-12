@@ -18,7 +18,7 @@ def compute_cluster_stats(clustered_df):
 
     for label, data in groups:
         avg_sentiment = data['Sentiment'].mean()
-        avg_review_length = data['Review Length Standardized'].mean()
+        avg_review_length = data['Review Length'].mean()
         avg_capital_letters = data['Capital Letters'].mean()
         contains_profanity_rate = data['Contains Profanity'].mean()
         avg_star_rating = data['Star Rating'].mean()

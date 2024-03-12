@@ -28,7 +28,8 @@ def count_capital_letters(text):
 
 try:
     # Read data from CSV
-    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv")
+    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv", nrows=100)
+    df.columns = df.columns.astype(str) # Ensure column names are all strings
 
     # Process reviews
     cleaned_reviews = process_reviews(df['Review Text'])
@@ -56,15 +57,16 @@ try:
     # print("Number of documents:", num_documents)
     # print("Number of dimensions aka unique terms:", num_dimensions)
 
-    # Perform PCA for dimensionality reduction
-    svd = TruncatedSVD(n_components=50)  
+    # Perform SVD for dimensionality reduction
+    svd = TruncatedSVD(n_components=10)  
     data_matrix = svd.fit_transform(data_matrix)
 
     # Concatenate reduced and normalized TF-IDF vectors with the other (standarized) features
     data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix, columns=[f"SVD_{i}" for i in range(svd.n_components)])], axis=1) 
 
+
     # Perform k-means clustering
-    k = 7
+    k = 3
     kmeans = KMeans(n_clusters=k, random_state=5)
     kmeans.fit(data_matrix)
 
