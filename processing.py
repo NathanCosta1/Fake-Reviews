@@ -9,6 +9,8 @@ from better_profanity import profanity
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import TruncatedSVD
+from transformers import BertTokenizer, BertModel
+import torch
 
 def process_reviews(reviews):
     cleaned_reviews = []
@@ -28,7 +30,7 @@ def count_capital_letters(text):
 
 try:
     # Read data from CSV
-    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv", nrows=100)
+    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv")
     df.columns = df.columns.astype(str) # Ensure column names are all strings
 
     # Process reviews
@@ -48,6 +50,23 @@ try:
     scaler = StandardScaler()
     df[features] = scaler.fit_transform(df[features])
 
+    # Sentence Embedding BERT technique to capture semantic meaning of sentences
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    model = BertModel.from_pretrained('bert-base-uncased')
+
+    # Tokenize and encode review text
+    encoded_inputs = tokenizer(df['Cleaned Review'].tolist(), padding=True, truncation=True, return_tensors='pt')
+
+    with torch.no_grad():
+        outputs = model(**encoded_inputs)
+
+    # Extract sentence embeddings from BERT outputs
+    # Using the [CLS] token representation for each review
+    review_embeddings = outputs.last_hidden_state[:, 0, :].numpy()
+
+    # Concatenate embeddings with other features
+    data_matrix = pd.concat([df[features], pd.DataFrame(review_embeddings)], axis=1)
+
     # Peform TF-IDF Vectorization with L1 Normalization
     vectorizer = TfidfVectorizer(stop_words='english', analyzer='word', norm='l1')
     data_matrix = vectorizer.fit_transform(df['Cleaned Review'])
@@ -63,7 +82,6 @@ try:
 
     # Concatenate reduced and normalized TF-IDF vectors with the other (standarized) features
     data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix, columns=[f"SVD_{i}" for i in range(svd.n_components)])], axis=1) 
-
 
     # Perform k-means clustering
     k = 3
