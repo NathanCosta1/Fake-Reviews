@@ -19,7 +19,7 @@ movie_urls = [
 with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile)
     # Create header 
-    writer.writerow(["Review Text", "Date", "Star Rating", "Total Films Reviewed", "Reviews This Year", "Following", "Followers"])
+    writer.writerow(["Review Text", "Star Rating", "Total Films Reviewed", "Reviews This Year", "Following", "Followers"])
     
     for url in movie_urls:
         page_number = 1
@@ -32,20 +32,18 @@ with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', e
                 
                 soup = BeautifulSoup(response.content, 'html.parser')
                 reviews = soup.find_all("div", class_="body-text -prose collapsible-text")
-                dates = soup.find_all("span", class_="date")
                 stars = soup.find_all("span", class_="rating")
                 avatars = soup.find_all("a", class_="avatar -a40")
                 
                 if not reviews:  # Last page reached
                     break
                 
-                for review, date, star, avatar in zip(reviews, dates, stars, avatars):
+                for review, star, avatar in zip(reviews, stars, avatars):
                     review_text = review.get_text(strip=True)
-                    review_date = date.get_text(strip=True)[-11:]  # Extract the last 11 characters (the date includes other non - important info)
-                    star_rating = star.get("class")[-1][-1]  # Extract the last character of the class (same reasoning as date)
+                    star_rating = star.get("class")[-1][-1]  # Extract the last character of the class (there is other extraneous data in this class)
                     user_profile_link = "https://letterboxd.com" + avatar["href"] 
                     
-                    # Go to User's profile through the link in their avatar - this will give us access to relevant user data like # of reviews made
+                    # Go to User's profile through the link in their avatar - this will give us access to relevant user data 
                     profile_response = requests.get(user_profile_link)
                     profile_response.raise_for_status()  # Raise an exception for HTTP errors
                     
@@ -67,11 +65,10 @@ with open('C:/Users/82nat/OneDrive/Desktop/reviews_data.csv', 'w', newline='', e
                   
                     if "this review may contain spoilers" not in review_text.lower(): 
                         # Write current review and all data to a row in CSV file
-                        writer.writerow([review_text, review_date, star_rating, total_films_reviewed, reviews_this_year, following, followers])
+                        writer.writerow([review_text, star_rating, total_films_reviewed, reviews_this_year, following, followers])
 
             except Exception as e:
-                print(f"An error occurred: {e}")
-                # Continue to the next page even if there's an error
+                print(f"Error: {e}")
             
             finally:
                 page_number += 1

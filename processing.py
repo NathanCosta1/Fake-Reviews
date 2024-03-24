@@ -11,6 +11,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import TruncatedSVD
 from transformers import BertTokenizer, BertModel
 import torch
+from nltk.corpus import stopwords
+
+stopwords = stopwords.words('english')
 
 def process_reviews(reviews):
     cleaned_reviews = []
@@ -19,7 +22,7 @@ def process_reviews(reviews):
             review_nopunct = "".join([char for char in review if char not in string.punctuation])
             tokens = re.split(r'\W+', review_nopunct)
             tokens = [word for word in tokens]
-            review_processed = [word for word in tokens]
+            review_processed = [word for word in tokens if word.lower() not in stopwords]
             cleaned_reviews.append(" ".join(review_processed))
         else:
             cleaned_reviews.append("")
@@ -29,71 +32,59 @@ def count_capital_letters(text):
     return sum(1 for char in text if char.isupper())
 
 try:
-    # Read data from CSV
-    df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv")
-    df.columns = df.columns.astype(str) # Ensure column names are all strings
+    output_file = "C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv"
 
-    # Process reviews
-    cleaned_reviews = process_reviews(df['Review Text'])
-    df.drop(columns=['Review Text'], inplace=True)
+    chunk_size = 4000  # Batch size for processing data
 
-    # Create dataframe with relevant features
-    df['Cleaned Review'] = cleaned_reviews
-    df['Sentiment'] = df['Cleaned Review'].apply(lambda x: TextBlob(x).sentiment.polarity)
-    df['Contains Profanity'] = df['Cleaned Review'].apply(lambda x: profanity.contains_profanity(x)).astype(int)
-    df['Capital Letters'] = df['Cleaned Review'].apply(count_capital_letters)
-    df['Review Length'] = df['Cleaned Review'].apply(len)
+    for chunk_df in pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv", chunksize=chunk_size):
+        chunk_df.columns = chunk_df.columns.astype(str)  # Ensure column names are all strings
 
-    # Standardize all features
-    features = ['Sentiment', 'Contains Profanity', 'Capital Letters', 'Star Rating', \
-                    'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']
-    scaler = StandardScaler()
-    df[features] = scaler.fit_transform(df[features])
+        # Process reviews
+        cleaned_reviews = process_reviews(chunk_df['Review Text'])
+        chunk_df.drop(columns=['Review Text'], inplace=True)
 
-    # Sentence Embedding BERT technique to capture semantic meaning of sentences
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    model = BertModel.from_pretrained('bert-base-uncased')
+        # Create dataframe with relevant features
+        chunk_df['Cleaned Review'] = cleaned_reviews
+        chunk_df['Sentiment'] = chunk_df['Cleaned Review'].apply(lambda x: TextBlob(x).sentiment.polarity)
+        chunk_df['Contains Profanity'] = chunk_df['Cleaned Review'].apply(lambda x: profanity.contains_profanity(x)).astype(int)
+        chunk_df['Capital Letters'] = chunk_df['Cleaned Review'].apply(count_capital_letters)
+        chunk_df['Review Length'] = chunk_df['Cleaned Review'].apply(len)
 
-    # Tokenize and encode review text
-    encoded_inputs = tokenizer(df['Cleaned Review'].tolist(), padding=True, truncation=True, return_tensors='pt')
+        # Standardize all features
+        features = ['Sentiment', 'Contains Profanity', 'Capital Letters', 'Star Rating', \
+                        'Total Films Reviewed', 'Reviews This Year', 'Followers', 'Following']
+        scaler = StandardScaler()
+        chunk_df[features] = scaler.fit_transform(chunk_df[features])
 
-    with torch.no_grad():
-        outputs = model(**encoded_inputs)
+        # Peform TF-IDF Vectorization with L1 Normalization and sparse representation
+        vectorizer = TfidfVectorizer(stop_words='english', analyzer='word', norm='l1', dtype=np.float32) 
+        data_matrix_tfidf = vectorizer.fit_transform(chunk_df['Cleaned Review'])
 
-    # Extract sentence embeddings from BERT outputs
-    # Using the [CLS] token representation for each review
-    review_embeddings = outputs.last_hidden_state[:, 0, :].numpy()
+        # Perform SVD for dimensionality reduction from TFIDF outputs
+        svd = TruncatedSVD(n_components=10, algorithm='randomized')  # randomized instead of dense to help with memory  
+        data_matrix_tfidf_reduced = svd.fit_transform(data_matrix_tfidf)
 
-    # Concatenate embeddings with other features
-    data_matrix = pd.concat([df[features], pd.DataFrame(review_embeddings)], axis=1)
+        # Concatenate reduced and normalized TF-IDF vectors with the other (standarized) features
+        data_matrix_tfidf_reduced = pd.DataFrame(data_matrix_tfidf_reduced, columns=[f"SVD_{i}" for i in range(svd.n_components)])
+        data_matrix = pd.concat([chunk_df[features], data_matrix_tfidf_reduced], axis=1)
 
-    # Peform TF-IDF Vectorization with L1 Normalization
-    vectorizer = TfidfVectorizer(stop_words='english', analyzer='word', norm='l1')
-    data_matrix = vectorizer.fit_transform(df['Cleaned Review'])
-    column_names = vectorizer.get_feature_names_out()
+        # Drop rows with NaN values
+        data_matrix.dropna(inplace=True)
 
-    # num_documents, num_dimensions = data_matrix.shape
-    # print("Number of documents:", num_documents)
-    # print("Number of dimensions aka unique terms:", num_dimensions)
+        if not data_matrix.empty:
+            # Perform k-means clustering
+            k = 4
+            kmeans = KMeans(n_clusters=k, random_state=5)
+            kmeans.fit(data_matrix)
 
-    # Perform SVD for dimensionality reduction
-    svd = TruncatedSVD(n_components=10)  
-    data_matrix = svd.fit_transform(data_matrix)
+            # Add cluster labels to the DataFrame
+            chunk_df['Cluster'] = kmeans.labels_
 
-    # Concatenate reduced and normalized TF-IDF vectors with the other (standarized) features
-    data_matrix = pd.concat([df[features], pd.DataFrame(data_matrix, columns=[f"SVD_{i}" for i in range(svd.n_components)])], axis=1) 
+            # Save results to CSV
+            mode = 'w' if chunk_df.index[0] == 0 else 'a'
+            chunk_df.to_csv(output_file, mode=mode, index=False, header=mode=='w')
 
-    # Perform k-means clustering
-    k = 3
-    kmeans = KMeans(n_clusters=k, random_state=5)
-    kmeans.fit(data_matrix)
-
-    # Add cluster labels to the DataFrame
-    df['Cluster'] = kmeans.labels_
-
-    # Save results to CSV
-    df.to_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv", index=False)
     print("Results saved")
-    
+
 except Exception as e:
     print(f"Error: {e}")
