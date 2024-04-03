@@ -32,11 +32,11 @@ def count_capital_letters(text):
     return sum(1 for char in text if char.isupper())
 
 try:
-    output_file = "C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv"
+    output_file = "C:/Users/82nat/Desktop/490/clustered_reviews.csv"
 
     chunk_size = 4000  # Batch size for processing data
 
-    for chunk_df in pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/reviews_data.csv", chunksize=chunk_size):
+    for chunk_df in pd.read_csv("C:/Users/82nat/Desktop/490/reviews_data.csv", chunksize=chunk_size):
         chunk_df.columns = chunk_df.columns.astype(str)  # Ensure column names are all strings
 
         # Process reviews

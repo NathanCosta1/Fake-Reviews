@@ -69,7 +69,7 @@ def visualize_clusters(data_matrix, cluster_labels):
     plt.show()
 
 def main():
-    clustered_df = pd.read_csv("C:/Users/82nat/OneDrive/Desktop/Career/Current Projects/APEX/clustered_reviews.csv")
+    clustered_df = pd.read_csv("C:/Users/82nat/Desktop/490/clustered_reviews.csv")
 
     # Remove rows with empty reviews
     clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
