@@ -50,8 +50,10 @@ def compute_silhouette_score(data_matrix, cluster_labels):
     print(f"Silhouette Score: {silhouette_avg:.4f}")
 
 def visualize_clusters(data_matrix, cluster_labels):
+    data_matrix_no_cluster = data_matrix.drop(columns=['Cluster'])
+
     pca = PCA(n_components=2) # Reducing the dimensions to 2 so we can visualize it in a graph
-    data_pca = pca.fit_transform(data_matrix)
+    data_pca = pca.fit_transform(data_matrix_no_cluster)
 
     colors = plt.cm.tab10(range(cluster_labels.nunique()))
 
@@ -67,9 +69,16 @@ def visualize_clusters(data_matrix, cluster_labels):
     plt.ylabel('Principal Component 2')
     plt.legend(title='Cluster')
     plt.show()
+    
+    pd.set_option('display.max_rows', None)  # Display all rows
+    pd.set_option('display.max_columns', None)  # Display all columns
+
+    principal_components = pd.DataFrame(pca.components_, columns=data_matrix_no_cluster.columns)
+    print("Principal Components:")
+    print(principal_components)
 
 def main():
-    clustered_df = pd.read_csv("C:/Users/82nat/Desktop/490/clustered_reviews.csv")
+    clustered_df = pd.read_csv("C:/Users/82nat/Desktop/490/clustered_reviews_TEST.csv")
 
     # Remove rows with empty reviews
     clustered_df.dropna(subset=['Cleaned Review'], inplace=True)
